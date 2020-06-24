@@ -9,7 +9,7 @@
 * Plugin Name: Webcourse-Controller
 * Plugin URI: http://www.jeffreyberglund.com
 * Description: This plugin does some stuff with WordPress
-* Version: 1.0.2
+* Version: 1.0.3
 * Author: Jeffrey Berglund
 * Author URI: http://www.jeffreyberglund.com
 * License: GPL2
