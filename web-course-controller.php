@@ -33,34 +33,65 @@ add_action( 'init', 'create_assigned_course_hierarchical_taxonomy', 0 );
  
 function create_assigned_course_hierarchical_taxonomy() {
  
-// Add new taxonomy, make it hierarchical like categories
-//first do the translations part for GUI
+	// Add new taxonomy, make it hierarchical like categories
+	//first do the translations part for GUI
+	 
+	  $labels = array(
+		'name' => _x( 'Assigned Course', 'taxonomy general name' ),
+		'singular_name' => _x( 'Assigned Course', 'taxonomy singular name' ),
+		'search_items' =>  __( 'Search Assigned Course' ),
+		'all_items' => __( 'All Assigned Course' ),
+		'parent_item' => __( 'Parent Assigned Course' ),
+		'parent_item_colon' => __( 'Parent Assigned Course:' ),
+		'edit_item' => __( 'Edit Assigned Course' ), 
+		'update_item' => __( 'Update Assigned Course' ),
+		'add_new_item' => __( 'Add New Assigned Course' ),
+		'new_item_name' => __( 'New Assigned Course Name' ),
+		'menu_name' => __( 'Assigned Course' ),
+	  );    
+	 
+	// Now register the taxonomy
+	 
+	  register_taxonomy('assigned course',array('topic', 'module'), array(
+		'hierarchical' => true,
+		'labels' => $labels,
+		'show_ui' => false,
+		'show_admin_column' => true,
+		'query_var' => true,
+		'rewrite' => array( 'slug' => 'assigned course' ),
+	  ));
+	}
+
+	function create_assigned_module_hierarchical_taxonomy() {
  
-  $labels = array(
-    'name' => _x( 'Assigned Course', 'taxonomy general name' ),
-    'singular_name' => _x( 'Assigned Course', 'taxonomy singular name' ),
-    'search_items' =>  __( 'Search Assigned Course' ),
-    'all_items' => __( 'All Assigned Course' ),
-    'parent_item' => __( 'Parent Assigned Course' ),
-    'parent_item_colon' => __( 'Parent Assigned Course:' ),
-    'edit_item' => __( 'Edit Assigned Course' ), 
-    'update_item' => __( 'Update Assigned Course' ),
-    'add_new_item' => __( 'Add New Assigned Course' ),
-    'new_item_name' => __( 'New Assigned Course Name' ),
-    'menu_name' => __( 'Assigned Course' ),
-  );    
- 
-// Now register the taxonomy
- 
-  register_taxonomy('assigned course',array('topic', 'module'), array(
-    'hierarchical' => true,
-    'labels' => $labels,
-    'show_ui' => false,
-    'show_admin_column' => true,
-    'query_var' => true,
-    'rewrite' => array( 'slug' => 'assigned course' ),
-  ));
-}
+		// Add new taxonomy, make it hierarchical like categories
+		//first do the translations part for GUI
+		 
+		  $labels = array(
+			'name' => _x( 'Assigned Module', 'taxonomy general name' ),
+			'singular_name' => _x( 'Assigned Module', 'taxonomy singular name' ),
+			'search_items' =>  __( 'Search Assigned Module' ),
+			'all_items' => __( 'All Assigned Module' ),
+			'parent_item' => __( 'Parent Assigned Module' ),
+			'parent_item_colon' => __( 'Parent Assigned Module:' ),
+			'edit_item' => __( 'Edit Assigned Module' ), 
+			'update_item' => __( 'Update Assigned Module' ),
+			'add_new_item' => __( 'Add New Assigned Module' ),
+			'new_item_name' => __( 'New Assigned Module Name' ),
+			'menu_name' => __( 'Assigned Module' ),
+		  );    
+		 
+		// Now register the taxonomy
+		 
+		  register_taxonomy('assigned module', array('topic'), array(
+			'hierarchical' => true,
+			'labels' => $labels,
+			'show_ui' => false,
+			'show_admin_column' => true,
+			'query_var' => true,
+			'rewrite' => array( 'slug' => 'assigned module' ),
+		  ));
+		}
 
 //////////////////////////////////////////////////////////////////////////////////////
 /////////////
@@ -126,6 +157,7 @@ class TesterUniquePost
 				'show_in_menu' => 'WCC-main-menu'
 			]
 		);
+		create_assigned_module_hierarchical_taxonomy();
 		// register the post type for courses
 		register_post_type( 
 			'course', 
@@ -150,12 +182,14 @@ class TesterUniquePost
 		function register_course_settings(){
 			register_setting( 'courses-settings-group', 'Course Listing Order' );
 		}
+		/*
 		// creating the html or whatever display stuff that appears when you go to the settings page. Currently a text box that can have text inserted and saved. Must convert to orderable list, that is also able to be saved.
 		function arrange_course_settings(){
+
 			?>
 			<div class="wrap">
 			<h1>Your Plugin Name</h1>
-			
+
 			<form method="post" action="options.php">
 				<?php settings_fields( 'courses-settings-group' ); ?>
 				<?php do_settings_sections( 'courses-settings-group' ); ?>
@@ -172,6 +206,7 @@ class TesterUniquePost
 			</div>
 			<?php
 		}
+		*/
 
 	}
 /*
