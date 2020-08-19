@@ -54,60 +54,6 @@ function create_parent_type() {
 add_action( 'init', 'create_parent_type' );
 
 /**
- * create custom taxonomies
- */
-/*
-function custom_taxonomy() {
- 
-	// Add new taxonomy, make it hierarchical like categories
-	//first do the translations part for GUI
-	  $labels = array(
-		'name' => _x( 'Organization', 'taxonomy general name' ),
-		'singular_name' => _x( 'Organization', 'taxonomy singular name' ),
-		'search_items' =>  __( 'Search Organization' ),
-		'all_items' => __( 'All Organization' ),
-		'parent_item' => __( 'Parent Organization' ),
-		'parent_item_colon' => __( 'Parent Organization:' ),
-		'edit_item' => __( 'Edit Organization' ), 
-		'update_item' => __( 'Update Organization' ),
-		'add_new_item' => __( 'Add New Organization' ),
-		'new_item_name' => __( 'New Organization Name' ),
-		'menu_name' => __( 'Organization' ),
-	  );    
-	 
-	// Now register the taxonomy
-	 
-	  register_taxonomy('Organization',array('testing_post', 'testing_post_parent'), array(
-		'hierarchical' => true,
-		'labels' => $labels,
-		'show_ui' => true,
-		'show_admin_column' => true,
-		'query_var' => true,
-		'rewrite' => array( 'slug' => 'Parents' ),
-	  ));
-}
-*/
-/**
- * This auto adds a category to posts
- */
-/*
-add_action( 'save_post', 'set_default_category' );
-function set_default_category( $post_id ) {
-
-    // Get the terms
-    $terms = wp_get_post_terms( $post_id, 'your_custom_taxonomy');
-
-    // Only set default if no terms are set yet
-    if (!$terms) {
-        // Assign the default category
-        $default_term = get_term_by('slug', 'your_term_slug', 'your_custom_taxonomy');
-        $taxonomy = 'your_custom_taxonomy';
-        wp_set_post_terms( $post_id, $default_term, $taxonomy );
-    }
-}
-*?
-
-/**
  * Adds a meta box to the post editing screen
  */
 
@@ -149,7 +95,7 @@ function test_box_callback( $post ) {
                 ?>
                     <div class="parent-option-div">
                         <label for= <?= "{$parent_id}" ?>>
-                            <input type="checkbox" name=<?= "{$parent_id}" ?> id=<?= "{$parent_id}" ?> parents=<?= "{$parent_id}" ?>  <?php /*checked( true );*/ if ( isset ( $prfx_stored_meta['parents'] ) )  checked( $prfx_stored_meta['parents'][0], 'yes' ); ?> />
+                            <input type="checkbox" name=<?= "{$parent_id}" ?> id=<?= "{$parent_id}" ?>   <?php /*checked( true );*/ if ( isset ( $prfx_stored_meta[$parent_id] ) )  checked( $prfx_stored_meta[$parent_id][0], 'yes' ); ?> />
                             <?php _e( get_the_title() . " (" . $parent_id . ")", 'prfx-textdomain' )?>
                         </label>        
                     </div>
@@ -171,7 +117,6 @@ function test_box_callback( $post ) {
  * Saves the custom meta input
  */
 function prfx_meta_save( $post_id ) {
-
     // Checks save status - overcome autosave, etc.
     $is_autosave = wp_is_post_autosave( $post_id );
     $is_revision = wp_is_post_revision( $post_id );
@@ -182,12 +127,51 @@ function prfx_meta_save( $post_id ) {
         return;
     }
 
-    // Checks for input and saves - save checked as yes and unchecked at no
-    if( isset( $_POST[ 'parents' ] ) ) {
-        update_post_meta( $post_id, 'parents', 'yes' );
-    } else {
-        update_post_meta( $post_id, 'parents', 'no' );
-    }
+    // arguments
+    $args = array( 'post_type' => 'testing_post_parent' );
+    // the query
+    $query = new WP_Query( $args );
 
+    // The Loop
+        while ( $query->have_posts() ) {
+            $query->the_post();
+            $parent_id = "parent_" . get_the_ID();
+            // Checks for input and saves - save checked as yes and unchecked at no
+            if( isset( $_POST[ $parent_id ] ) ) {
+                update_post_meta( $post_id, $parent_id, 'yes' );
+            } else {
+                update_post_meta( $post_id, $parent_id, 'no' );
+            }
+        }
+    /* Restore original Post Data */
+    wp_reset_postdata();
 }
 add_action( 'save_post', 'prfx_meta_save' );
+
+
+add_action('wp_trash_post', 'remove_deleted_parent_meta');
+function remove_deleted_parent_meta( $post_id) {
+    // arguments
+    $args = array( 'post_type' => 'testing_post' );
+    // the query
+    $query = new WP_Query( $args );
+    $del_parent = $post_id;
+
+    // The Loop
+        while ( $query->have_posts() ) {
+            $query->the_post();
+            delete_metadata('post', get_the_ID(), "parent_" . $del_parent, '', true);
+        }
+    /* Restore original Post Data */
+    wp_reset_postdata();
+}
+/*
+function testingthing(){/*
+    $deletable = array( 'metakeyinput', 'parent_111');
+    foreach( $deleteable as $to_delete ) {
+        //echo "HEEEEEEEEEEEEEEEEERE";
+        delete_metadata( 'post', 0, 'featured-checkbox', '', true );
+    //}
+}
+add_action('init', 'testingthing');
+*/
