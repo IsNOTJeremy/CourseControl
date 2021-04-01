@@ -26,13 +26,21 @@ function activate(){
     // generate
     $this->create_child_type();
     $this->create_parent_type();
-    // flush rewrite rules
-    flush_rewrite_rules();
 }
 function deactivate(){
     // flush rewrite rules
     flush_rewrite_rules();
 }
+// this is to ensure that the permalinks work on activation. There is probably a better way to implement this later
+register_activation_hook( __FILE__, 'my_rewrite_flush' );
+function my_rewrite_flush(){
+    // these are supposed to ensure that the new post types are added I think
+    create_child_type();
+    create_parent_type();
+    // flush rewrite rules
+    flush_rewrite_rules();
+}
+
 
 /**
  * Create the custom post types
@@ -59,15 +67,19 @@ function create_child_type() {
 add_action( 'init', 'create_child_type' );
 
 function create_parent_type() {
+    // the custom post type name
     register_post_type( 'testing_post_parent',
         array(
             'labels' => array(
+                // the displayed name on the menu
                 'name' => __( 'Test Parents' ),
                 'singular_name' => __( 'Test Post Parent' )
             ),
             'public' => true,
             'has_archive' => true,
+            // this ajusts the permalinks
             'rewrite'     => array( 'slug' => 'parent' ),
+            // the supports. These are all required.
             'supports' => array( 'title', 'editor', 'custom-fields' )
         )
     );
@@ -383,8 +395,9 @@ function prfx_meta_save( $post_id ) {
         $child_id = $post_id;
         // creating a key using our current child post's id
         $child_key = "child_" . $post_id;
-        // getting the meta data of our current child post
-        $child_meta = get_post_meta( $child_id->ID );
+        // getting the meta data of our current child post.
+        // does this even do anything except throw an error? Commenting it out.
+        //$child_meta = get_post_meta( $child_id->ID );
 
         // The Loop over parents
         while ( $query->have_posts() ) {
