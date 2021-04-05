@@ -9,7 +9,7 @@
 * Plugin Name: Course Control
 * Plugin URI: http://www.jeffreyberglund.com
 * Description: Add course page management
-* Version: 1.6
+* Version: 1.6.1
 * Author: Jeffrey Berglund
 * Author URI: http://www.jeffreyberglund.com
 * License: GPL2
@@ -160,7 +160,6 @@ add_action( 'add_meta_boxes', 'CC_add_post_meta_boxs' );
 // function name
 function CC_connect_parents_box_gen( $post ) {
     // create a nonce for valication purposes
-    console_log(get_post_meta($post->ID));
     wp_nonce_field( basename( __FILE__ ), 'CC_nonce' );
     // getting the id of the current post
     $current_post_id = $post->ID;
@@ -261,7 +260,7 @@ function CC_display_children_box_gen( $post ) {
         <p>
         </p>
     <?php
-    
+    console_log($post->post_name);
     // create a nonce for valication purposes
     wp_nonce_field( basename( __FILE__ ), 'CC_nonce' );
     // getting the id of the current post
@@ -418,51 +417,57 @@ function cc_parents_column_pop( $column, $post_id ) {
 // calling the function
 add_action( 'restrict_manage_posts', 'cc_filter_by_parents' );
 function cc_filter_by_parents() {
-    
-    $current_post_type = get_post_type();
-    $current_post_level = str_replace('cc_level_', '', $current_post_type);
-    $parent_post_level = $current_post_level - 1;
-    $parent_post_type = 'cc_level_' . $parent_post_level;
-    if(post_type_exists($parent_post_type)){
-        // setting arguments for the query. Argument is the post type being parent type posts
-        $args = array( 'post_type' => $parent_post_type );
-        // creating a new query using the arguments
-        $query = new WP_Query( $args );
-        // creating an array to hold a list of the parents, it will be a 2d array, being an array of arrays
-        $parent_list = array();
-        // iterating through the parents and getting their information
-        while ( $query->have_posts() ) {
-            // getting the parent post
-            $query->the_post();
-            // getting the id of the parent post
-            $parent_id = get_the_ID();
-            // getting the title of the parent post
-            $parent_name = get_the_title($parent_id);
-            // creating an entry which contains the parent's name and ID in an array
-            $entry = array($parent_name, $parent_id);
-            // adding this entry array into the parent list array
-            $parent_list[] = $entry;
-        }
-        // reseting the query after our use of it
-        wp_reset_postdata();
-        // utilizing the wordpress variables of $typenow to find the type of post we are currently viewing
-        global $typenow;
-        // testing if we are currently viewing the child posts
-        if ( $typenow == $current_post_type ) {
-            // I think I can just remove everything related to $current_parent.
-            $current_parent = '';
-            if( isset( $_GET['slug'] ) ) {
-                $current_parent = $_GET['slug']; // Check if option has been selected
-            } 
-            // this outputs and displays the parents that the child on that row has
-            ?>
-                <select name="slug" id="slug">
-                    <option value="all" <?php selected( 'all', $current_parent ); ?>><?php _e( 'All ' . get_post_type_object($parent_post_type)->label, 'cc-plugin' ); ?></option>
-                    <?php foreach( $parent_list as $key=>$value ) { ?>
-                    <option value="<?php echo esc_attr( $value[1] ); ?>" <?php selected( $value[1], $current_parent ); ?>><?php echo esc_attr( $value[0] ); ?></option>
-                    <?php } ?>
-                </select>
-            <?php
+    $post_type = isset( $_GET['post_type'] ) ? $_GET['post_type'] : '';
+    // checking if there are any existing parent type posts that are published, drafts, or pending
+    if(startsWith($post_type, 'cc_level')){
+        if ( ( wp_count_posts($post_type)->publish > 0 ) || ( wp_count_posts( $post_type )->draft > 0 ) || 
+        ( wp_count_posts( $post_type )->pending > 0 ) ) {
+            $current_post_type = $post_type;
+            $current_post_level = str_replace('cc_level_', '', $current_post_type);
+            $parent_post_level = $current_post_level - 1;
+            $parent_post_type = 'cc_level_' . $parent_post_level;
+            if(post_type_exists($parent_post_type)){
+                // setting arguments for the query. Argument is the post type being parent type posts
+                $args = array( 'post_type' => $parent_post_type );
+                // creating a new query using the arguments
+                $query = new WP_Query( $args );
+                // creating an array to hold a list of the parents, it will be a 2d array, being an array of arrays
+                $parent_list = array();
+                // iterating through the parents and getting their information
+                while ( $query->have_posts() ) {
+                    // getting the parent post
+                    $query->the_post();
+                    // getting the id of the parent post
+                    $parent_id = get_the_ID();
+                    // getting the title of the parent post
+                    $parent_name = get_the_title($parent_id);
+                    // creating an entry which contains the parent's name and ID in an array
+                    $entry = array($parent_name, $parent_id);
+                    // adding this entry array into the parent list array
+                    $parent_list[] = $entry;
+                }
+                // reseting the query after our use of it
+                wp_reset_postdata();
+                // utilizing the wordpress variables of $typenow to find the type of post we are currently viewing
+                global $typenow;
+                // testing if we are currently viewing the child posts
+                if ( $typenow == $current_post_type ) {
+                    // I think I can just remove everything related to $current_parent.
+                    $current_parent = '';
+                    if( isset( $_GET['slug'] ) ) {
+                        $current_parent = $_GET['slug']; // Check if option has been selected
+                    } 
+                    // this outputs and displays the parents that the child on that row has
+                    ?>
+                        <select name="slug" id="slug">
+                            <option value="all" <?php selected( 'all', $current_parent ); ?>><?php _e( 'All ' . get_post_type_object($parent_post_type)->label, 'cc-plugin' ); ?></option>
+                            <?php foreach( $parent_list as $key=>$value ) { ?>
+                            <option value="<?php echo esc_attr( $value[1] ); ?>" <?php selected( $value[1], $current_parent ); ?>><?php echo esc_attr( $value[0] ); ?></option>
+                            <?php } ?>
+                        </select>
+                    <?php
+                }
+            }
         }
     }
 }
@@ -490,7 +495,6 @@ function cc_sort_parents_by_slug( $query ) {
             $parent_post_level = $current_post_level - 1;
             $parent_post_type = 'cc_level_' . $parent_post_level;
             $parent_post_type_exists = post_type_exists($parent_post_type);
-            console_log($parent_post_type_exists);
             if ( is_admin() && $pagenow=='edit.php' && $post_type == $parent_post_type_exists && isset( $_GET['slug'] ) && $_GET['slug'] !='all' ) {
                 // the selected parent is the filter slug plus our parent_ key
                 $selectedParent = $parent_post_type . '_' . $_GET['slug'];
@@ -508,62 +512,64 @@ function cc_sort_parents_by_slug( $query ) {
  */
 // function name. Including the current post id.
 function CC_save_metas( $post_id ) {
-    // getting the id of the current post
-    $current_post_id = $post->ID;
-    // getting the post type of the current post
-    $current_post_type = get_post_type($current_post_id);
-    $start_string = 'cc_level_';
-    // make sure this is one of our post types
-    if(startsWith($current_post_type, $start_string)){
-        // getting the meta data of the current post
-        $cc_stored_meta = get_post_meta( $post->ID );
-        // get the level of the current post
-        $current_post_level = ltrim($current_post_type, "cc_level_");
-        // get the level of the parent
-        $parent_post_level = $current_post_level - 1;
-        // get the type of the parent
-        $parent_post_type = 'cc_level_' . $parent_post_level;
-        // test that the post type has existing parents
-        if( post_type_exists( $parent_post_type ) ){
-            // Checks save status - overcome autosave, etc.
-            $is_autosave = wp_is_post_autosave( $post_id );
-            $is_revision = wp_is_post_revision( $post_id );
-            $is_valid_nonce = ( isset( $_POST[ 'cc_nonce' ] ) && wp_verify_nonce( $_POST[ 'cc_nonce' ], basename( __FILE__ ) ) ) ? 'true' : 'false';
-            // Exits script depending on save status
-            if ( $is_autosave || $is_revision || !$is_valid_nonce ) {
-                return;
-            }
-            // arguments for a query. Arguments are post type being parent type posts
-            $args = array( 'post_type' => $parent_post_type );
-            // the query
-            $query = new WP_Query( $args );
-            // the child id is the id of the currently being saved post
-            $child_id_saving = $post_id;
-            // creating a key using our current child post's id
-            $child_key = $current_post_type . '_' . $post_id;
-            // getting the meta data of our current child post
-            // I don't think this is actually doing anything. Commenting out for now.
-            //$child_meta = get_post_meta( $child_id_saving->ID );
-
-            // The Loop over parents
-            while ( $query->have_posts() ) {
-                $query->the_post();
-                // getting the id of the parent post, and creating a key for it
-                $parent_id = get_the_ID();
-                $parent_key = $parent_post_type . '_' . get_the_ID();
-                // Checks for input and saves - save checked as yes and unchecked at no.
-                // If it is a yes, then add the child to the parent as meta data.
-                // If no, ensure that the child is not related on the parent's side by deleting any entry with this child's key on the parent.
-                if( isset( $_POST[ $parent_key ] ) ) {
-                    update_post_meta( $child_id_saving, $parent_key, 'yes' );
-                    update_post_meta( $parent_id, $child_key, get_permalink($child_id_saving) );
-                } else {
-                    update_post_meta( $child_id_saving, $parent_key, 'no' );
-                    delete_metadata('post', $parent_id, $child_key, '', false );
+    if(get_the_title() != null){
+        // getting the id of the current post
+        $current_post_id = $post->ID;
+        // getting the post type of the current post
+        $current_post_type = get_post_type($current_post_id);
+        $start_string = 'cc_level_';
+        // make sure this is one of our post types
+        if(startsWith($current_post_type, $start_string)){
+            // getting the meta data of the current post
+            $cc_stored_meta = get_post_meta( $post->ID );
+            // get the level of the current post
+            $current_post_level = ltrim($current_post_type, "cc_level_");
+            // get the level of the parent
+            $parent_post_level = $current_post_level - 1;
+            // get the type of the parent
+            $parent_post_type = 'cc_level_' . $parent_post_level;
+            // test that the post type has existing parents
+            if( post_type_exists( $parent_post_type ) ){
+                // Checks save status - overcome autosave, etc.
+                $is_autosave = wp_is_post_autosave( $post_id );
+                $is_revision = wp_is_post_revision( $post_id );
+                $is_valid_nonce = ( isset( $_POST[ 'cc_nonce' ] ) && wp_verify_nonce( $_POST[ 'cc_nonce' ], basename( __FILE__ ) ) ) ? 'true' : 'false';
+                // Exits script depending on save status
+                if ( $is_autosave || $is_revision || !$is_valid_nonce ) {
+                    return;
                 }
+                // arguments for a query. Arguments are post type being parent type posts
+                $args = array( 'post_type' => $parent_post_type );
+                // the query
+                $query = new WP_Query( $args );
+                // the child id is the id of the currently being saved post
+                $child_id_saving = $post_id;
+                // creating a key using our current child post's id
+                $child_key = $current_post_type . '_' . $post_id;
+                // getting the meta data of our current child post
+                // I don't think this is actually doing anything. Commenting out for now.
+                //$child_meta = get_post_meta( $child_id_saving->ID );
+
+                // The Loop over parents
+                while ( $query->have_posts() ) {
+                    $query->the_post();
+                    // getting the id of the parent post, and creating a key for it
+                    $parent_id = get_the_ID();
+                    $parent_key = $parent_post_type . '_' . get_the_ID();
+                    // Checks for input and saves - save checked as yes and unchecked at no.
+                    // If it is a yes, then add the child to the parent as meta data.
+                    // If no, ensure that the child is not related on the parent's side by deleting any entry with this child's key on the parent.
+                    if( isset( $_POST[ $parent_key ] ) ) {
+                        update_post_meta( $child_id_saving, $parent_key, 'yes' );
+                        update_post_meta( $parent_id, $child_key, get_permalink($child_id_saving) );
+                    } else {
+                        update_post_meta( $child_id_saving, $parent_key, 'no' );
+                        delete_metadata('post', $parent_id, $child_key, '', false );
+                    }
+                }
+                // Restore original Post Data after using the query
+                wp_reset_postdata();
             }
-            // Restore original Post Data after using the query
-            wp_reset_postdata();
         }
     }
 }
@@ -607,6 +613,18 @@ function CC_remove_deleted_parent_meta( $post_id) {
         }
         /* Restore original Post Data */
         wp_reset_postdata();
+    }
+}
+
+add_action( 'untrash_post', 'cc_fix_deleted_draft_slug' );
+function cc_fix_deleted_draft_slug( $post_id ){
+    if(startsWith(get_post($post_id)->post_name, '__trashed')){
+        wp_update_post(
+            [
+                'ID'        => $post_id,
+                'post_name' => ''
+            ]
+        );
     }
 }
 
