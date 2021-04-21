@@ -22,8 +22,12 @@ if (!function_exists('add_action')) {
     exit;
 }
 defined('ABSPATH') or die('Go away.');
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+	die;
+}
 
-function activate()
+function activate_CourseControl()
 {
     // generate
     // trying without the $this. I don't know if this helps or not, but meh.
@@ -34,13 +38,19 @@ function activate()
     // flush rewrite rules
     flush_rewrite_rules();
 }
-function deactivate()
+register_activation_hook(__FILE__, 'activate_CourseControl');
+
+function deactivate_CourseControl()
 {
     // flush rewrite rules
     flush_rewrite_rules();
 }
-// this is to ensure that the permalinks work on activation. There is probably a better way to implement this later
+register_deactivation_hook( __FILE__, 'deactivate_plugin_name' );
+/*
+// wtf? Why did I make this? //4/20/21
+    // this is to ensure that the permalinks work on activation. There is probably a better way to implement this later
 register_activation_hook(__FILE__, 'my_rewrite_flush');
+
 function my_rewrite_flush()
 {
     // this is supposed to ensure that the new post types are added and navagible I think
@@ -48,7 +58,7 @@ function my_rewrite_flush()
     CC_create_post_types();
     flush_rewrite_rules();
 }
-
+*/
 // this is code that can output messages to the console for debuging purposes
 function console_log($output, $with_script_tags = true)
 {
