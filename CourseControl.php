@@ -10,7 +10,7 @@
 * Plugin Name: Course Control
 * Plugin URI: http://www.jeffreyberglund.com
 * Description: Add course page management
-* Version: 1.6.1
+* Version: 1.6.1.2
 * Author: Jeffrey Berglund
 * Author URI: http://www.jeffreyberglund.com
 * License: GPL2
@@ -150,34 +150,44 @@ add_action('init', 'CC_create_post_types');
  * Automatically add parent and child meta boxes to all CC post levels
  */
 // function name
-function CC_add_post_meta_boxs($post)
+function CC_add_post_meta_boxes($post)
 {
-    // iterate through all CC post types. If more are added, they will be iterated through as well.
-    $post_level_number = 0;
-    // Our loop for adding.
-    do {
-        // creating variables. Getting the numbers of what the parent and child of the current post number. And getting the post type of our current level.
-        $post_level_parent = $post_level_number - 1;
-        $post_level_child = $post_level_number + 1;
-        $post_type = 'cc_level_' . $post_level_number;
-        // Add parent checkbox metas. Only run if a parent type post exists
-        if (post_type_exists('cc_level_' . $post_level_parent)) {
-            // making a variable for what will be the parent post type, and its label
-            $parent_post_type = 'cc_level_' . $post_level_parent;
-            $parent_object_label = get_post_type_object($parent_post_type)->label;
-            // Name of the box, the title in the box, the called function to populate the box, the post type the box appears on, the position on the screen, priority placement on the screen
-            add_meta_box('CC_checklist_of_' . $parent_object_label, $parent_object_label, 'CC_connect_parents_box_gen', $post_type, 'side', 'high');
-        }
-        // Add list of children metas. Only run if a child type post exists
-        if (post_type_exists('cc_level_' . $post_level_child)) {
-            $child_post_type = 'cc_level_' . $post_level_child;
-            $child_object_label = get_post_type_object($child_post_type)->label;
-            add_meta_box('CC_checklist_of_' . $child_object_label, $child_object_label, 'CC_display_children_box_gen', $post_type, 'side', 'high');
-        }
-        $post_level_number += 1;
-    } while (post_type_exists('cc_level_' . $post_level_number));
+    console_log("CourseControl.php: Line 155");
+    // getting post info
+    $current_post_id = get_the_id($post);
+    if(!is_int($current_post_id)){
+        $current_post_id = $post->ID;
+    }
+    $current_post_type = get_post_type($current_post_id);
+    // if we are not in one of our custom post types, exit this.
+    if(!startsWith($current_post_type, 'cc_level_')) return;
+    // finishing post info with the current post's level
+    $current_post_level = str_replace("cc_level_", "", $current_post_type);
+    // getting parent and child post info
+    $parent_post_level = $current_post_level-1;
+    $child_post_level = $current_post_level+1;
+    // Add parent checkbox metas. Only run if a parent type post exists
+    if(post_type_exists('cc_level_' . $parent_post_level) && $parent_post_level >= 0) {
+        // making a variable for what will be the parent post type, and its label
+        $parent_post_type = 'cc_level_' . $parent_post_level;
+        $parent_object_label = get_post_type_object($parent_post_type)->label;
+        // Name of the box, the title in the box, the called function to populate the box, the post type the box appears on, the position on the screen, priority placement on the screen
+        add_meta_box('CC_checklist_of_' . $parent_object_label, $parent_object_label, 'CC_connect_parents_box_gen', $current_post_type, 'side', 'high');
+        console_log("CourseControl.php Line:175");
+    }
+    // Add list of children metas. Only run if a child type post exists
+    if (post_type_exists('cc_level_' . $child_post_level)) {
+        $child_post_type = 'cc_level_' . $child_post_level;
+        $child_object_label = get_post_type_object($child_post_type)->label;
+        add_meta_box('CC_checklist_of_' . $child_object_label, $child_object_label, 'CC_display_children_box_gen', $current_post_type, 'side', 'high');
+        console_log("CourseControl.php Line:182");
+    }
+    //CC_save_metas($current_post_id);
+    wp_reset_postdata();
 }
-add_action('add_meta_boxes', 'CC_add_post_meta_boxs');
+add_action('add_meta_boxes', 'CC_add_post_meta_boxes');
+console_log("CourseControl.php Line:188");
+
 
 /**
  * Add checkboxes and a unique meta field for every parent post type to each child post.
@@ -185,6 +195,7 @@ add_action('add_meta_boxes', 'CC_add_post_meta_boxs');
 // function name
 function CC_connect_parents_box_gen($post)
 {
+    console_log("CC: 198");
     // create a nonce for valication purposes
     wp_nonce_field(basename(__FILE__), 'CC_nonce');
     // getting the id of the current post
@@ -195,12 +206,13 @@ function CC_connect_parents_box_gen($post)
     $current_post_type = get_post_type($current_post_id);
     // get the level of the current post
     $current_post_level = ltrim($current_post_type, "cc_level_");
+    if($current_post_level <= 0) return;
     // get the level of the parent
     $parent_post_level = $current_post_level - 1;
     // get the type of the parent
     $parent_post_type = 'cc_level_' . $parent_post_level;
     // had to add this to make sure that the permalink and name of the post doesn't get changed weird
-    if (get_the_title() != null) {
+    if (get_the_title($current_post_id) != null) {
         // checking if there are any existing parent type posts that are published, drafts, or pending
         if ((wp_count_posts($parent_post_type)->publish > 0) || (wp_count_posts($parent_post_type)->draft > 0) ||
             (wp_count_posts($parent_post_type)->pending > 0)
@@ -249,6 +261,8 @@ function CC_connect_parents_box_gen($post)
                 </div>
             <?php
             }
+            $test_child_post_metas = get_post_meta($current_post_id);
+
             // Restore original Post Data for the query loop
             wp_reset_postdata();
         }
@@ -279,6 +293,7 @@ function CC_connect_parents_box_gen($post)
  */
 function CC_display_children_box_gen($post)
 {
+    console_log("CC:296");
     echo 'This is a list of children';
     ?>
     <p>
@@ -543,64 +558,78 @@ function cc_sort_parents_by_slug($query)
 // function name. Including the current post id.
 function CC_save_metas($post_id)
 {
-    if (get_the_title() != null) {
-        // getting the id of the current post
-        $current_post_id = $post_id;
-        // getting the post type of the current post
-        $current_post_type = get_post_type($current_post_id);
-        $start_string = 'cc_level_';
-        // make sure this is one of our post types
-        if (startsWith($current_post_type, $start_string)) {
-            // get the level of the current post
-            $current_post_level = ltrim($current_post_type, "cc_level_");
-            // get the level of the parent
-            $parent_post_level = $current_post_level - 1;
-            // get the type of the parent
-            $parent_post_type = 'cc_level_' . $parent_post_level;
-            // test that the post type has existing parents
-            if (post_type_exists($parent_post_type)) {
-                // Checks save status - overcome autosave, etc.
-                $is_autosave = wp_is_post_autosave($post_id);
-                $is_revision = wp_is_post_revision($post_id);
-                $is_valid_nonce = (isset($_POST['cc_nonce']) && wp_verify_nonce($_POST['cc_nonce'], basename(__FILE__))) ? 'true' : 'false';
-                // Exits script depending on save status
-                if ($is_autosave || $is_revision || !$is_valid_nonce) {
-                    return;
-                }
-                // arguments for a query. Arguments are post type being parent type posts
-                $args = array('post_type' => $parent_post_type);
-                // the query
-                $query = new WP_Query($args);
-                // the child id is the id of the currently being saved post
-                $child_id_saving = $post_id;
-                // creating a key using our current child post's id
-                $child_key = $current_post_type . '_' . $post_id;
-                // getting the meta data of our current child post
-                // I don't think this is actually doing anything. Commenting out for now.
-                //$child_meta = get_post_meta( $child_id_saving->ID );
-
-                // The Loop over parents
-                while ($query->have_posts()) {
-                    $query->the_post();
-                    // getting the id of the parent post, and creating a key for it
-                    $parent_id = get_the_ID();
-                    $parent_key = $parent_post_type . '_' . get_the_ID();
-                    // Checks for input and saves - save checked as yes and unchecked at no.
-                    // If it is a yes, then add the child to the parent as meta data.
-                    // If no, ensure that the child is not related on the parent's side by deleting any entry with this child's key on the parent.
-                    if (isset($_POST[$parent_key])) {
-                        update_post_meta($child_id_saving, $parent_key, 'yes');
-                        update_post_meta($parent_id, $child_key, get_permalink($child_id_saving));
-                    } else {
-                        update_post_meta($child_id_saving, $parent_key, 'no');
-                        delete_metadata('post', $parent_id, $child_key, '', false);
-                    }
-                }
-                // Restore original Post Data after using the query
-                wp_reset_postdata();
-            }
+    //echo '
+    //made it to saving
+    //';
+    //echo $post_id . '
+    //';
+    //echo get_post_type($post_id) . '
+    //';
+    if (get_the_title($post_id) === null) return;
+    // getting the id of the current post
+    $current_post_id = $post_id;
+    // getting the post type of the current post
+    $current_post_type = get_post_type($current_post_id);
+    $start_string = 'cc_level_';
+    // make sure this is one of our post types
+    if (!startsWith($current_post_type, $start_string)) return;
+    // get the level of the current post
+    $current_post_level = ltrim($current_post_type, "cc_level_");
+    // get the level of the parent
+    $parent_post_level = $current_post_level - 1;
+    // get the type of the parent
+    $parent_post_type = 'cc_level_' . $parent_post_level;
+    // test that the post type has existing parents
+    if (!post_type_exists($parent_post_type)) return;
+    // Checks save status - overcome autosave, etc.
+    $is_autosave = wp_is_post_autosave($post_id);
+    $is_revision = wp_is_post_revision($post_id);
+    $is_valid_nonce = (isset($_POST['cc_nonce']) && wp_verify_nonce($_POST['cc_nonce'], basename(__FILE__))) ? 'true' : 'false';
+    // Exits script depending on save status
+    if ($is_autosave || $is_revision || !$is_valid_nonce) {
+        return;
+    }
+    // arguments for a query. Arguments are post type being parent type posts
+    $args = array('post_type' => $parent_post_type);
+    // the query
+    $query = new WP_Query($args);
+    // the child id is the id of the currently being saved post
+    $child_id_saving = $post_id;
+    // creating a key using our current child post's id
+    $child_key = $current_post_type . '_' . $post_id;
+    // getting the meta data of our current child post
+    // I don't think this is actually doing anything. Commenting out for now.
+    //$child_meta = get_post_meta( $child_id_saving->ID );
+    // The Loop over parents
+    while ($query->have_posts()) {
+        $query->the_post();
+        // getting the id of the parent post, and creating a key for it
+        $parent_id = get_the_ID();
+        $parent_key = $parent_post_type . '_' . get_the_ID();
+        // Checks for input and saves - save checked as yes and unchecked at no.
+        // If it is a yes, then add the child to the parent as meta data.
+        // If no, ensure that the child is not related on the parent's side by deleting any entry with this child's key on the parent.
+        if (isset($_POST[$parent_key])) {
+            update_post_meta($child_id_saving, $parent_key, 'yes');
+            update_post_meta($parent_id, $child_key, get_permalink($child_id_saving));
+        } else {
+            update_post_meta($child_id_saving, $parent_key, 'no');
+            delete_metadata('post', $parent_id, $child_key, '', false);
         }
     }
+    wp_reset_query();
+    $args = array('post_type' => $current_post_type);
+    $query = new WP_Query($args);
+    while ($query->have_posts()) {
+        $query->the_post();
+        $newID = get_the_ID();
+        if($newID === $current_post_id){
+            wp_reset_postdata();
+            return;
+        }
+    }
+    // Restore original Post Data after using the query
+    wp_reset_postdata();
 }
 add_action('save_post', 'CC_save_metas');
 
