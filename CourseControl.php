@@ -408,10 +408,9 @@ add_filter('manage_cc_level_2_posts_columns', 'cc_parents_column');
 // function name. Including the columns of the post type we are on
 function cc_parents_column($columns)
 {
-    
-        
+    global $typenow;
     // do all of this to get the label of the parent post type
-    $current_post_type = get_post_type();
+    $current_post_type = $typenow;
     $current_post_level = str_replace('cc_level_', '', $current_post_type);
     $parent_post_level = $current_post_level - 1;
     $parent_post_type = 'cc_level_' . $parent_post_level;
@@ -425,10 +424,7 @@ function cc_parents_column($columns)
         'date' => $columns['date']
     );
     
-    // returning this changed order for the columns.
-    
-    //$WP_Posts_List_Table->no_items();
-        
+    // returning this changed order for the columns.    
     return $custom_col_order;
 }
 
