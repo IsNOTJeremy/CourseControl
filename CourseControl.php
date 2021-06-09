@@ -10,7 +10,7 @@
 * Plugin Name: Course Control
 * Plugin URI: http://www.jeffreyberglund.com
 * Description: Add course page management
-* Version: 1.6.2
+* Version: 1.7
 * Author: Jeffrey Berglund
 * Author URI: http://www.jeffreyberglund.com
 * License: GPL2
