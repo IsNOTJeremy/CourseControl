@@ -10,7 +10,7 @@
 * Plugin Name: Course Control
 * Plugin URI: http://www.jeffreyberglund.com
 * Description: Add course page management
-* Version: 1.6.1.2
+* Version: 1.6.2
 * Author: Jeffrey Berglund
 * Author URI: http://www.jeffreyberglund.com
 * License: GPL2
@@ -27,6 +27,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+// tested
 function activate_CourseControl()
 {
     // generate
@@ -72,6 +73,7 @@ function console_log($output, $with_script_tags = true)
 
 /**
  * Create a menu page
+ * tested
  */
 function CC_admin_menu()
 {
@@ -148,11 +150,12 @@ add_action('init', 'CC_create_post_types');
 
 /**
  * Automatically add parent and child meta boxes to all CC post levels
+ * tested
  */
 // function name
 function CC_add_post_meta_boxes($post)
 {
-    console_log("CourseControl.php: Line 155");
+    //console_log("CourseControl.php: Line 155");
     // getting post info
     $current_post_id = get_the_id($post);
     if(!is_int($current_post_id)){
@@ -173,29 +176,30 @@ function CC_add_post_meta_boxes($post)
         $parent_object_label = get_post_type_object($parent_post_type)->label;
         // Name of the box, the title in the box, the called function to populate the box, the post type the box appears on, the position on the screen, priority placement on the screen
         add_meta_box('CC_checklist_of_' . $parent_object_label, $parent_object_label, 'CC_connect_parents_box_gen', $current_post_type, 'side', 'high');
-        console_log("CourseControl.php Line:175");
+        //console_log("CourseControl.php Line:175");
     }
     // Add list of children metas. Only run if a child type post exists
     if (post_type_exists('cc_level_' . $child_post_level)) {
         $child_post_type = 'cc_level_' . $child_post_level;
         $child_object_label = get_post_type_object($child_post_type)->label;
         add_meta_box('CC_checklist_of_' . $child_object_label, $child_object_label, 'CC_display_children_box_gen', $current_post_type, 'side', 'high');
-        console_log("CourseControl.php Line:182");
+        //console_log("CourseControl.php Line:182");
     }
     //CC_save_metas($current_post_id);
     wp_reset_postdata();
 }
 add_action('add_meta_boxes', 'CC_add_post_meta_boxes');
-console_log("CourseControl.php Line:188");
+//console_log("CourseControl.php Line:188");
 
 
 /**
  * Add checkboxes and a unique meta field for every parent post type to each child post.
+ * tested
  */
 // function name
 function CC_connect_parents_box_gen($post)
 {
-    console_log("CC: 198");
+    //console_log("CC: 198");
     // create a nonce for valication purposes
     wp_nonce_field(basename(__FILE__), 'CC_nonce');
     // getting the id of the current post
@@ -290,16 +294,17 @@ function CC_connect_parents_box_gen($post)
 }
 /**
  * Display all the children of a post in a metabox
+ * tested
  */
 function CC_display_children_box_gen($post)
 {
-    console_log("CC:296");
+    //global $message = "Create a child and assign it to me";
     echo 'This is a list of children';
     ?>
     <p>
     </p>
     <?php
-    console_log($post->post_name);
+    //console_log($post->post_name);
     // create a nonce for valication purposes
     wp_nonce_field(basename(__FILE__), 'CC_nonce');
     // getting the id of the current post
@@ -312,19 +317,20 @@ function CC_display_children_box_gen($post)
     $child_post_level = $current_post_level + 1;
     // get the type of the child
     $child_post_type = 'cc_level_' . $child_post_level;
-    //echo $child_post_type;
     // testing if there are any children that exist as being published, drafts, or pending, if not skip to else statement.
     if ((wp_count_posts($child_post_type)->publish > 0) || (wp_count_posts($child_post_type)->draft > 0) ||
         (wp_count_posts($child_post_type)->pending > 0)
     ) {
         // getting the metadata of the current post
-        $postmetas = get_post_meta(get_the_ID());
-        console_log($postmetas);
+        $postmetas = get_post_meta($current_post_id);
+        //console_log($postmetas);
+        $have_child = false;
         // Loop through each one of the meta datas on the current post
         foreach ($postmetas as $meta_key => $meta_value) {
             // the test for if this meta data field is one of the children by using the attached key at the start of the string
             $startString = $child_post_type . '_';
             if (startsWith($meta_key, $startString)) {
+                $have_child = true;
                 // the id of the found related child
                 // using str_replace instead of ltrim, because ltrim caused bugs chopping off too much
                 $childID = str_replace($startString, "", $meta_key);
@@ -346,6 +352,17 @@ function CC_display_children_box_gen($post)
             </p>
         <?php
         }
+        if($have_child){
+            return("Has child");
+        }
+        else{
+            echo 'No children are assigned to this object';
+            ?>
+            <p>
+            </p>
+            <?php
+            return("No assigned child");
+        }
     }
     // run if there are no children available to run through and display a message to create a child
     else {
@@ -354,6 +371,7 @@ function CC_display_children_box_gen($post)
             <span class="cc-row-title"><?php _e('Create a child and assign it to me', 'cc-textdomain') ?></span>
         </p>
         <?php
+        return('No child exist');
     }
 }
 
@@ -366,6 +384,7 @@ function startsWith($string, $startString)
 
 /**
  * Add a column to children that is named for their parent
+ * function name: cc_parents_column
  * 
  * Future features:
  *      Possibly make the list of the parents also be hyperlinks to the edit page for that parent
@@ -389,8 +408,9 @@ add_filter('manage_cc_level_2_posts_columns', 'cc_parents_column');
 // function name. Including the columns of the post type we are on
 function cc_parents_column($columns)
 {
+    global $typenow;
     // do all of this to get the label of the parent post type
-    $current_post_type = get_post_type();
+    $current_post_type = $typenow;
     $current_post_level = str_replace('cc_level_', '', $current_post_type);
     $parent_post_level = $current_post_level - 1;
     $parent_post_type = 'cc_level_' . $parent_post_level;
@@ -403,7 +423,8 @@ function cc_parents_column($columns)
         'parentsList' => $columns['parentsList'],
         'date' => $columns['date']
     );
-    // returning this changed order for the columns.
+    
+    // returning this changed order for the columns.    
     return $custom_col_order;
 }
 
@@ -429,14 +450,14 @@ function cc_parents_column_pop($column, $post_id)
         // iterating through each of the existing meta fields of the post
         foreach ($postmetas as $meta_key => $meta_value) {
             // testing if the meta field is of a parent type
-            $startString = $parent_post_type;
+            $startString = $parent_post_type . '_';
             if (startsWith($meta_key, $startString) && $meta_value[0] == 'yes') {
                 // if this is a second or later parent type post, add a comma and a space
                 if ($counter > 0) {
                     echo ', ';
                 }
                 // getting the id of this parent
-                $parent_id = ltrim($meta_key, $startString);
+                $parent_id = str_replace($startString, '', $meta_key);
                 // getting the title of the parent
                 $parent_title = get_the_title($parent_id);
                 // display the name of the parent
@@ -558,13 +579,6 @@ function cc_sort_parents_by_slug($query)
 // function name. Including the current post id.
 function CC_save_metas($post_id)
 {
-    //echo '
-    //made it to saving
-    //';
-    //echo $post_id . '
-    //';
-    //echo get_post_type($post_id) . '
-    //';
     if (get_the_title($post_id) === null) return;
     // getting the id of the current post
     $current_post_id = $post_id;
